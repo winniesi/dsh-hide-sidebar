@@ -33,12 +33,15 @@
  *   other main panel (plugin manager, schedules) has no leading seat, so the
  *   button floats in the frame's overlay layer and the panel reserves a left
  *   gutter for it.
- * - **Tapping through the drawer dismisses it.** A drawer that stays open after
- *   the reader picked a session hides the thing they just asked for, so a click
- *   inside it on a navigating control closes it — while menus and inline
- *   disclosures (session actions, search, Workspace groups) keep it open. The
- *   decision reads stable `data-row-key`/`data-slot` hooks plus `aria-expanded`
- *   and `aria-haspopup`, never a generated class name or a translated label.
+ * - **Tapping through the drawer dismisses it — but only navigation does.** A
+ *   drawer that stays open after the reader picked a session hides the thing
+ *   they just asked for, so picking one (or a panel, Settings, New Session, a
+ *   link) closes it. Everything else keeps it: a control that opens something
+ *   (a quota card unfolding its dashboard, a menu, a popup, the session search)
+ *   and a control nested in a row (archive, pin, a session's actions), plus
+ *   blank space. The decision reads stable hooks — `data-row-key`, `data-slot`,
+ *   `aria-expanded`, `aria-haspopup` — never a generated class name or a
+ *   translated label.
  * - **Theme tokens only.** Colours, radii, elevation and the scrim all come from
  *   the `--dsw-*` design tokens, so light and dark both follow the app.
  *
@@ -74,35 +77,50 @@ window.__ModuleLoader__.load({
     const RIGHT_VAR = '--dsh-hs-right'
 
     /**
-     * Controls whose use means "I am done with the sidebar": choosing a session
-     * or a global panel, or opening Settings or a footer action. Every selector
-     * here is a stable, unlocalized hook (`data-row-key`, `data-slot`), not a
-     * generated class name or an aria label. The panel and Settings rows are
-     * matched through the slot that sits *inside* their button, which is why
-     * they read as `:has()`.
+     * Controls that always mean "I am done with the sidebar", whatever they
+     * contain: switching the main panel, and Settings — a fullscreen modal that
+     * covers the drawer anyway. Choosing a session needs no entry here; the
+     * generic rule in `keepsDrawerOpen` already reads a session row as
+     * navigation. Both hooks are stable and unlocalized: the slot that sits
+     * *inside* the button, which is why they read as `:has()`.
      */
     const DISMISS_SELECTORS = [
-      '[data-row-key^="session:"]',
       'button:has([data-slot="sidebar.panellist"])',
       'button:has([data-slot="settings.trigger"])',
-      '[data-slot="sidebar.footer.action"] button',
-      '[data-slot="sidebar.footer.action"] [role="button"]',
     ].join(',')
     /**
-     * Controls that open a menu or an inline disclosure — a session's actions,
-     * the session search, the view options, a Workspace group row. They leave
-     * the drawer open, because the thing they disclose lives inside it.
+     * Controls that open something instead of navigating: an inline disclosure
+     * (the Command Code quota card unfolding its dashboard), a menu, a popup, a
+     * text field. Tapping one leaves the drawer where it is.
      */
-    const KEEP_OPEN_SELECTORS = [
-      '[aria-expanded]',
-      '[aria-haspopup]',
-      'input',
-      'textarea',
-      '[data-slot="sidebar.session.row.hover"]',
-      '[data-slot^="sidebar.workspaces.session.row.action"]',
-    ].join(',')
-    /** Anything that activates: used when no explicit dismiss hook matched. */
+    const KEEP_OPEN_SELECTORS = '[aria-expanded],[aria-haspopup],input,textarea'
+    /** Anything that activates at all: tells "something happened" from blank space. */
     const ACTIVATE_SELECTORS = 'button,[role="button"],[role="treeitem"],a[href]'
+    /** Any sidebar row — one Session or one Workspace group. */
+    const ROW_SELECTOR = '[data-row-key]'
+
+    /**
+     * Whether a tap inside the open drawer should leave it open.
+     *
+     * Three answers cover every case seen in the sidebar:
+     *
+     * - blank space inside the drawer is not a reason to close anything;
+     * - a control that discloses something — a menu, a popup, an inline panel —
+     *   keeps the drawer, because what it opens is anchored to the drawer;
+     * - a control nested *inside* a row acts on that row (archive, pin, a
+     *   session's action menu), while the row itself is navigation.
+     *
+     * Pure, so the offline check can drive every branch without a DOM.
+     * @param control - nearest activating element, or null for blank space.
+     * @param row - enclosing row element, or null.
+     * @param disclosure - nearest disclosing element, or null.
+     * @returns true when the drawer must stay open.
+     */
+    function keepsDrawerOpen(control, row, disclosure) {
+      if (control === null) return true
+      if (row !== null && control !== row) return true
+      return disclosure !== null && (control === disclosure || control.contains(disclosure))
+    }
 
     /** The stylesheet. See the module doc for why each rule is shaped this way. */
     const CSS = `
@@ -299,11 +317,14 @@ window.__ModuleLoader__.load({
          * The listener is delegated on the document — re-reading the drawer each
          * time, so the sidebar's own re-renders cannot strand it — and runs in
          * the capture phase, so a control that stops its own propagation still
-         * counts. The close itself is deferred by one frame and re-checks the
-         * state first: the sidebar's own collapse control toggles the same layout
-         * flag, and a second toggle in the same click would cancel it out.
-         * Deferring makes this a fallback for controls that navigate without
-         * closing, never a competitor to one that already closed the drawer.
+         * counts. The decision itself is `keepsDrawerOpen`'s; only the element
+         * lookups live here.
+         *
+         * The close is deferred by one frame and re-checks the state first: the
+         * sidebar's own collapse control toggles the same layout flag, and a
+         * second toggle in the same click would cancel it out. Deferring makes
+         * this a fallback for controls that navigate without closing, never a
+         * competitor to one that already closed the drawer.
          */
         const onDocumentClick = (event) => {
           const { narrow, collapsed } = frameState.get()
@@ -313,9 +334,12 @@ window.__ModuleLoader__.load({
           const target = event.target
           if (!(target instanceof Element) || !drawer.contains(target)) return
           const dismiss = target.closest(DISMISS_SELECTORS) !== null
-          const keepOpen = target.closest(KEEP_OPEN_SELECTORS) !== null
-          const activates = target.closest(ACTIVATE_SELECTORS) !== null
-          if (!dismiss && !(activates && !keepOpen)) return
+          if (!dismiss) {
+            const control = target.closest(ACTIVATE_SELECTORS)
+            const row = target.closest(ROW_SELECTOR)
+            const disclosure = target.closest(KEEP_OPEN_SELECTORS)
+            if (keepsDrawerOpen(control, row, disclosure)) return
+          }
           requestAnimationFrame(() => {
             const state = frameState.get()
             if (state.narrow && !state.collapsed) toggleRef.current()
@@ -518,6 +542,8 @@ window.__ModuleLoader__.load({
       DISMISS_SELECTORS,
       KEEP_OPEN_SELECTORS,
       ACTIVATE_SELECTORS,
+      ROW_SELECTOR,
+      keepsDrawerOpen,
       PANEL_ICON,
       splitTracks,
       createFrameState,

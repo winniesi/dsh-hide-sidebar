@@ -26,10 +26,14 @@
 | 怎么打开 | 细条上那个小箭头 | 顶部左侧的按钮（会话页在标题栏里，其他面板页浮在左上角） |
 | 怎么关闭 | 再点一次箭头 | 点蒙层、侧边栏自己的收起按钮，或者**选完会话／面板自动收起** |
 
-「选完自动收起」是有意做的：抽屉挡着内容不走的话，刚点的那个会话就被自己遮住了。判断用的是稳定钩子（`data-row-key`、`data-slot`）加 `aria-expanded`／`aria-haspopup`，不依赖会变的哈希类名和会翻译的 aria 文案——所以：
+「选完自动收起」是有意做的：抽屉挡着内容不走的话，刚点的那个会话就被自己遮住了。判断只看稳定钩子（`data-row-key`、`data-slot`、`aria-expanded`、`aria-haspopup`），不依赖会变的哈希类名和会翻译的 aria 文案，问的是一件事：这一下是**跳转**，还是**展开**？
 
-- 点会话行、点全局面板（Plugins）、点 Settings／底部动作 → 收起；
-- 点会话行的「更多操作」、搜索、“视图选项”、Workspace 分组的展开箭头 → 保持打开（它们展开的东西就在抽屉里）。
+- **收起**：选会话、切全局面板（Plugins）、Settings、New Session、链接；
+- **保持打开**：打开东西的控件（Command Code 用量卡展开看板、会话行的「更多操作」、搜索框、“视图选项”、Workspace 分组）和**行内**的控件（归档、置顶），以及抽屉里的空白处。
+
+它判的是**控件干什么**，不是它挂在哪个槽位。早先的版本按槽位判，侧边栏底部那张用量卡就吃了亏：点它会把抽屉收起来，而不是展开看板。
+
+<img src="docs/mobile-footer-disclosure.png" width="300" alt="抽屉仍然开着，侧边栏底部的 Command Code 用量卡已展开，显示 5 小时／每周／每月三条额度条">
 
 宽屏下插件整体不生效（连按钮都不渲染），样式表里每一条规则都挂在 `html[data-dsh-hide-sidebar]` 上，而这个属性只在框架实测宽度小于断点时才被写上。
 
@@ -113,7 +117,7 @@ dsh plugin --profile web add /path/to/dsh-hide-sidebar
 npm test          # = node test/smoke.mjs —— 离线检查，不需要浏览器
 ```
 
-`test/smoke.mjs` 按模块加载器的真实方式加载 `client.js`（走 `window.__ModuleLoader__.load`），用桩上下文跑 `apply()`，再用 `react-dom/server` 把两个座位都渲染出来。本机跑下来是 45 项断言（没装 dsh、下面那项 token 比对跳过时是 43 项）：
+`test/smoke.mjs` 按模块加载器的真实方式加载 `client.js`（走 `window.__ModuleLoader__.load`），用桩上下文跑 `apply()`，再用 `react-dom/server` 把两个座位都渲染出来。本机跑下来是 55 项断言（没装 dsh、下面那项 token 比对跳过时是 53 项）：
 
 - 注册项（两个槽位、list 槽位的 id、locale、inject 面、`exports.inject`）；
 - `splitTracks` 的括号嵌套、空值、单轨等边界；

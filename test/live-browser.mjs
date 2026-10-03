@@ -185,6 +185,52 @@ const browser = await chromium.launch()
   await page.close()
 }
 
+//#region mobile: an inline disclosure in the sidebar foot
+{
+  const { page, errors } = await open(browser, 390, 844)
+  await page.locator('.dsh-hs-leading').click()
+  await page.waitForTimeout(700)
+  // A footer action renders only once its host has answered, and the answer can
+  // take a few seconds on a cold start, so wait for the card rather than assume.
+  const card = page.locator('[data-slot="sidebar.footer.action"] [role="button"]').first()
+  let installed = false
+  for (let attempt = 0; attempt < 12 && !installed; attempt += 1) {
+    installed = (await card.count()) > 0
+    if (!installed) await page.waitForTimeout(1000)
+  }
+  if (!installed) {
+    console.log('live-browser: no sidebar footer action installed; skipped the inline-disclosure case')
+  } else {
+    assert((await card.getAttribute('aria-expanded')) === 'false', 'the footer card starts folded')
+    const before = await card.boundingBox()
+    await card.click()
+    await page.waitForTimeout(900)
+    // The reported bug: this tap used to dismiss the drawer because the card
+    // lives in the footer-action slot. It must unfold in place instead.
+    assert(
+      (await probe(page)).collapsed === false,
+      'an inline disclosure in the sidebar foot does not dismiss the drawer',
+    )
+    assert((await card.count()) > 0, 'the disclosure is still mounted inside the drawer')
+    const after = await card.boundingBox()
+    const expandedAfter = await card.getAttribute('aria-expanded')
+    // Whether there is anything to unfold depends on the host having an account
+    // to report: either the card grew, or the tap changed nothing at all.
+    assert(
+      expandedAfter === 'true' || (after?.height ?? 0) === (before?.height ?? 0),
+      'the disclosure unfolds in place when its host has something to report',
+      `aria-expanded=${String(expandedAfter)}, height ${String(before?.height)} -> ${String(after?.height)}`,
+    )
+    console.log(
+      `live-browser: footer card ${Math.round(before?.height ?? 0)}px -> ${Math.round(after?.height ?? 0)}px,` +
+        ` aria-expanded=${String(expandedAfter)} after the tap`,
+    )
+    await page.screenshot({ path: join(artifacts, 'mobile-footer-disclosure.png') })
+  }
+  assert(errors.length === 0, 'the footer disclosure session logs no errors', errors.join(' | ').slice(0, 300))
+  await page.close()
+}
+
 //#region wide: the shipped layout
 {
   const { page, errors } = await open(browser, 1440, 900)

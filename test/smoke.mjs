@@ -191,15 +191,54 @@ assert(!leadingMarkup.includes('NaN'), 'no NaN reaches the markup')
 
 //#region pure helpers
 
-const { splitTracks, createFrameState, CSS, ATTR, PANEL_ICON, DISMISS_SELECTORS, KEEP_OPEN_SELECTORS, ACTIVATE_SELECTORS } =
-  plugin.__test
+const {
+  splitTracks,
+  createFrameState,
+  keepsDrawerOpen,
+  CSS,
+  ATTR,
+  PANEL_ICON,
+  DISMISS_SELECTORS,
+  KEEP_OPEN_SELECTORS,
+  ACTIVATE_SELECTORS,
+  ROW_SELECTOR,
+} = plugin.__test
 
-assert(DISMISS_SELECTORS.includes('[data-row-key^="session:"]'), 'the dismiss list hooks the session rows')
 assert(DISMISS_SELECTORS.includes('button:has([data-slot="sidebar.panellist"])'), 'the dismiss list hooks the panel rows')
 assert(DISMISS_SELECTORS.includes('button:has([data-slot="settings.trigger"])'), 'the dismiss list hooks the Settings trigger')
-assert(KEEP_OPEN_SELECTORS.includes('[aria-expanded]'), 'menus and inline disclosures keep the drawer open')
+assert(
+  !DISMISS_SELECTORS.includes('footer.action'),
+  'a footer action is not dismissed by slot: the quota card there is an inline disclosure',
+)
+assert(KEEP_OPEN_SELECTORS.includes('[aria-expanded]'), 'inline disclosures keep the drawer open')
 assert(KEEP_OPEN_SELECTORS.includes('[aria-haspopup]'), 'popup triggers keep the drawer open')
 assert(ACTIVATE_SELECTORS.includes('button'), 'the activation fallback covers buttons')
+equal(ROW_SELECTOR, '[data-row-key]', 'rows are found by their stable row key')
+
+// The dismissal rule, every branch. `contains` is what the real DOM element
+// would answer; booleans on the fakes keep the cases readable.
+const el = (name, contains = () => false) => ({ name, contains })
+const card = el('quota card')
+const strip = el('card strip', (other) => other === card)
+const link = el('billing link')
+const sessionRow = el('session row')
+const archive = el('archive button')
+const menu = el('session actions menu button')
+
+equal(keepsDrawerOpen(null, null, null), true, 'blank space inside the drawer keeps it open')
+equal(keepsDrawerOpen(card, null, card), true, 'a disclosure keeps the drawer open (quota card)')
+equal(keepsDrawerOpen(menu, null, menu), true, 'a popup trigger keeps the drawer open (row menu)')
+equal(keepsDrawerOpen(sessionRow, sessionRow, null), false, 'a session row navigates, so it dismisses the drawer')
+const workspaceRow = el('workspace group row')
+equal(
+  keepsDrawerOpen(workspaceRow, workspaceRow, workspaceRow),
+  true,
+  'a Workspace group row carries aria-expanded, so toggling it keeps the drawer',
+)
+equal(keepsDrawerOpen(archive, sessionRow, null), true, 'a control nested inside a row acts on the row, not the layout')
+equal(keepsDrawerOpen(link, null, card), false, 'a link inside an unfolded disclosure leaves, so it dismisses')
+equal(keepsDrawerOpen(strip, null, card), true, 'a child of the disclosure is the disclosure')
+equal(keepsDrawerOpen(card, null, null), false, 'an activating control with nothing to disclose dismisses')
 
 equal(splitTracks('56px minmax(0px, 1fr) minmax(0px, 0px)').length, 3, 'tracks split around nested parentheses')
 equal(splitTracks('280px minmax(400px, 1fr) minmax(0px, 405px)')[0], '280px', 'the drawer track is the first one')

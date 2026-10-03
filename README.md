@@ -28,10 +28,14 @@ English | [中文](README.zh.md)
 | Opening | The little arrow on the rail | The button at the top left — inside the header on the Conversation, floating in the top-left corner on every other panel |
 | Closing | The arrow again | The scrim, the sidebar's own collapse control, or **just picking a session or a panel** |
 
-That last one is deliberate: a drawer that stays open hides the thing you just asked for. Closing is decided from stable hooks (`data-row-key`, `data-slot`) plus `aria-expanded` / `aria-haspopup` — never a generated class name or a translated label. So:
+That last one is deliberate: a drawer that stays open hides the thing you just asked for. The decision reads stable hooks only — `data-row-key`, `data-slot`, `aria-expanded`, `aria-haspopup`, never a generated class name or a translated label — and asks one question: did that tap navigate, or did it open something?
 
-- a session row, a global panel row (Plugins), Settings, a footer action → the drawer closes;
-- a session's action menu, the session search, the view options, a Workspace group row → it stays open, because what they disclose lives inside the drawer.
+- **dismisses**: picking a session, switching to a global panel (Plugins), Settings, New Session, a link;
+- **stays open**: a control that opens something (the Command Code quota card unfolding its dashboard, a session's action menu, the session search, a Workspace group row) and a control nested inside a row (archive, pin) — as does blank space.
+
+It is about *what the control does*, not which slot it sits in. An earlier version dismissed by slot, and the quota card in the sidebar foot paid for it: tapping it closed the drawer instead of unfolding the dashboard.
+
+<img src="docs/mobile-footer-disclosure.png" width="300" alt="The drawer still open with the Command Code quota card unfolded in the sidebar foot, showing its 5-hour, weekly and monthly meters">
 
 On wide viewports the plugin is inert: no button is rendered, and every layout rule is gated on `html[data-dsh-hide-sidebar]` — an attribute written only while the frame's *measured* width is below the breakpoint.
 
@@ -110,7 +114,7 @@ The frame receives its three tracks as an inline `grid-template-columns`. One `!
 npm test          # = node test/smoke.mjs — offline, no browser needed
 ```
 
-`test/smoke.mjs` loads `client.js` the way the module loader really does (through `window.__ModuleLoader__.load`), drives `apply()` with a stub context, then renders both seats with `react-dom/server`. It runs 45 assertions here (43 when dsh is not installed for the token comparison below), covering the registration shape (two slots, the list-slot id, locale, the injected face, `exports.inject`), `splitTracks` edge cases (nested parentheses, empty, single track), the frame-state observer (notifies only on a real change), the rendered markup (no `undefined`, no `NaN`, `aria-label`/`aria-expanded` present) and the stylesheet's discipline: every layout rule gated on the root attribute, no literal colours, and **every `--dsw-*` token it uses verified against the token list of the theme actually installed on this machine**.
+`test/smoke.mjs` loads `client.js` the way the module loader really does (through `window.__ModuleLoader__.load`), drives `apply()` with a stub context, then renders both seats with `react-dom/server`. It runs 55 assertions here (53 when dsh is not installed for the token comparison below), covering the registration shape (two slots, the list-slot id, locale, the injected face, `exports.inject`), `splitTracks` edge cases (nested parentheses, empty, single track), the frame-state observer (notifies only on a real change), the rendered markup (no `undefined`, no `NaN`, `aria-label`/`aria-expanded` present) and the stylesheet's discipline: every layout rule gated on the root attribute, no literal colours, and **every `--dsw-*` token it uses verified against the token list of the theme actually installed on this machine**.
 
 That last group exists because a component that throws inside a slot **silently empties the whole slot** in the browser, so awkward inputs are worth rendering. That comparison reads a file *dsh itself installed*, and is skipped with a note when dsh is absent: the plugin has no runtime dependency on that package, so its internals being reorganised is not this plugin's failure.
 
