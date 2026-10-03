@@ -113,7 +113,7 @@ dsh plugin --profile web add /path/to/dsh-hide-sidebar
 npm test          # = node test/smoke.mjs —— 离线检查，不需要浏览器
 ```
 
-`test/smoke.mjs` 按模块加载器的真实方式加载 `client.js`（走 `window.__ModuleLoader__.load`），用桩上下文跑 `apply()`，再用 `react-dom/server` 把两个座位都渲染出来，共 50 项断言：
+`test/smoke.mjs` 按模块加载器的真实方式加载 `client.js`（走 `window.__ModuleLoader__.load`），用桩上下文跑 `apply()`，再用 `react-dom/server` 把两个座位都渲染出来。本机跑下来是 49 项断言（没装 dsh、下面两项比对跳过时是 43 项）：
 
 - 注册项（两个槽位、list 槽位的 id、locale、inject 面、`exports.inject`）；
 - `splitTracks` 的括号嵌套、空值、单轨等边界；
@@ -122,7 +122,7 @@ npm test          # = node test/smoke.mjs —— 离线检查，不需要浏览�
 - 样式表纪律：所有布局规则都被 `html[data-dsh-hide-sidebar]` 包着、没有字面色（hex/rgb/hsl）、**用到的每个 `--dsw-*` token 都在当前安装的主题里存在**（token 列表从本机 dsh 附带的那份主题包里读）；
 - 图标一致性：两条 SVG path、viewBox、描边宽度都跟本机安装的 primitives 包里的原图形逐字比对 —— 抄歪了会测试失败，而不是悄悄看起来不对。
 
-还有一类专门用来"找崩"的输入——组件在浏览器里一旦抛异常，整个槽位会**静默清空**，所以这些值得跑。
+还有一类专门用来"找崩"的输入——组件在浏览器里一旦抛异常，整个槽位会**静默清空**，所以这些值得跑。 那两项比对读的是 **dsh 自己装的那些文件**：没装 dsh 时跳过并说明；上游把图标挪走或改名时只打一行提示、不判失败——插件运行时并不依赖那个包，它内部重新组织不该算这个插件的错。
 
 浏览器里的检查另有一条（需要正在运行的 dsh 和你正在看的那个已鉴权 URL）：
 

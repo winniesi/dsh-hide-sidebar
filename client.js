@@ -351,10 +351,12 @@ window.__ModuleLoader__.load({
      * exactly "that top-right icon turned 180 degrees", so the two controls read
      * as one family.
      *
-     * Copied rather than imported on purpose: a profile-installed plugin must
-     * not depend on dsh's own packages, and a failed `require` here would take
-     * the whole Web boot down with it. `test/smoke.mjs` re-reads the installed
-     * primitives bundle and fails if this copy drifts from upstream.
+     * Copied here in full, as of dsh 0.2.0-rc.2: the plugin has no runtime
+     * dependency on dsh's own packages, because a profile-installed plugin
+     * cannot resolve them and a failed `require` would take the whole Web boot
+     * down with it. `test/smoke.mjs` compares this copy against the installed
+     * artwork so a later dsh release that redraws the icon is noticed instead of
+     * leaving the two corners looking subtly different.
      */
     const PANEL_ICON = {
       viewBox: '0 0 16 16',
