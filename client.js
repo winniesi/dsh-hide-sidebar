@@ -341,28 +341,46 @@ window.__ModuleLoader__.load({
 
     //#region components
 
-    /** The panel-left glyph, drawn inline so the bundle imports nothing extra. */
-    function PanelLeftIcon({ size }) {
+    /**
+     * The shipped panel glyph, verbatim.
+     *
+     * This is `IconPanelLeftOutlineRegular` from
+     * `@deepseek-ai/dsh-client-ui-primitives` — the artwork the top-right "open
+     * right sidebar" control draws after mirroring it with `scaleX(-1)`, and the
+     * one ui-sidebar's own open control uses as-is. Taking it unmirrored is
+     * exactly "that top-right icon turned 180 degrees", so the two controls read
+     * as one family.
+     *
+     * Copied rather than imported on purpose: a profile-installed plugin must
+     * not depend on dsh's own packages, and a failed `require` here would take
+     * the whole Web boot down with it. `test/smoke.mjs` re-reads the installed
+     * primitives bundle and fails if this copy drifts from upstream.
+     */
+    const PANEL_ICON = {
+      viewBox: '0 0 16 16',
+      strokeWidth: 1,
+      /** Outer rounded frame. */
+      frame:
+        'M13.5 1.5H2.5C1.94772 1.5 1.5 1.94772 1.5 2.5V13.5C1.5 14.0523 1.94772 14.5 2.5 14.5H13.5C14.0523 14.5 14.5 14.0523 14.5 13.5V2.5C14.5 1.94772 14.0523 1.5 13.5 1.5Z',
+      /** The divider rail, on the left here. */
+      divider: 'M5.5 1.5V14.5',
+    }
+
+    /** Draw the panel glyph at the shipped metrics (16px, 1px stroke). */
+    function PanelIcon({ size }) {
       return h(
         'svg',
         {
           width: size,
           height: size,
-          viewBox: '0 0 16 16',
+          viewBox: PANEL_ICON.viewBox,
           fill: 'none',
+          xmlns: 'http://www.w3.org/2000/svg',
           'aria-hidden': 'true',
-          focusable: 'false',
+          strokeWidth: PANEL_ICON.strokeWidth,
         },
-        h('rect', {
-          x: 1.75,
-          y: 2.75,
-          width: 12.5,
-          height: 10.5,
-          rx: 2.25,
-          stroke: 'currentColor',
-          strokeWidth: 1.2,
-        }),
-        h('path', { d: 'M6.4 2.75v10.5', stroke: 'currentColor', strokeWidth: 1.2 }),
+        h('path', { d: PANEL_ICON.frame, stroke: 'currentColor' }),
+        h('path', { d: PANEL_ICON.divider, stroke: 'currentColor' }),
       )
     }
 
@@ -381,7 +399,7 @@ window.__ModuleLoader__.load({
           title: label,
           onClick,
         },
-        h(PanelLeftIcon, { size: 18 }),
+        h(PanelIcon, { size: 16 }),
       )
     }
 
@@ -499,6 +517,7 @@ window.__ModuleLoader__.load({
       DISMISS_SELECTORS,
       KEEP_OPEN_SELECTORS,
       ACTIVATE_SELECTORS,
+      PANEL_ICON,
       splitTracks,
       createFrameState,
       FrameControls,

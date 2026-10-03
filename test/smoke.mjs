@@ -183,6 +183,8 @@ assert(overlayMarkup.includes('aria-label="Open sidebar"'), 'a collapsed drawer 
 assert(overlayMarkup.includes('aria-expanded="false"'), 'a collapsed drawer reports aria-expanded=false')
 assert(!overlayMarkup.includes('undefined'), 'no unresolved placeholder reaches the markup')
 assert(leadingMarkup.includes('dsh-hs-leading'), 'the header seat renders the leading toggle')
+assert(leadingMarkup.includes('viewBox="0 0 16 16"'), 'the toggle draws the shipped 16px panel glyph')
+assert(leadingMarkup.includes('M5.5 1.5V14.5'), 'the glyph carries the shipped divider rail')
 assert(!leadingMarkup.includes('NaN'), 'no NaN reaches the markup')
 
 //#endregion
@@ -229,13 +231,12 @@ assert(CSS.includes('position:absolute'), 'the sidebar column is taken out of th
 assert(CSS.includes('--dsw-elevation-prominent'), 'the drawer uses the design system elevation token')
 
 /**
- * Locate the installed theme package so the stylesheet's tokens can be checked
- * against the ones the running app really publishes. Tries, in order: an
- * explicit override, the `dsh` executable on PATH (its own bundled
- * `node_modules`), and the global npm root.
- * @returns the theme bundle path, or undefined when dsh cannot be found.
+ * Candidate directories holding dsh's own installed packages: an explicit
+ * override, then the `dsh` executable on PATH (whose own bundled
+ * `node_modules` carries them).
+ * @returns absolute package directories to search.
  */
-function findThemePackage() {
+function installedPackageRoots() {
   const roots = []
   if (process.env.DSH_PACKAGES_DIR !== undefined) roots.push(process.env.DSH_PACKAGES_DIR)
   const executable = (process.env.PATH ?? '')
@@ -249,12 +250,24 @@ function findThemePackage() {
       /* a broken symlink just means this candidate is unusable */
     }
   }
-  for (const root of roots) {
-    const theme = join(root, 'dsh-client-ui-theme', 'lib', 'client.js')
-    if (existsSync(theme)) return theme
+  return roots
+}
+
+/**
+ * Find one file inside dsh's installed packages, so a copy this plugin makes of
+ * shipped artwork or shipped tokens can be checked against the real thing.
+ * @param relative - path below the `@deepseek-ai` package directory.
+ * @returns the file path, or undefined when dsh cannot be found.
+ */
+function findInstalled(relative) {
+  for (const root of installedPackageRoots()) {
+    const file = join(root, relative)
+    if (existsSync(file)) return file
   }
   return undefined
 }
+
+const findThemePackage = () => findInstalled(join('dsh-client-ui-theme', 'lib', 'client.js'))
 
 const themeFile = findThemePackage()
 if (themeFile === undefined) {
@@ -266,6 +279,32 @@ if (themeFile === undefined) {
   const missing = [...used].filter((name) => !defined.has(name))
   equal(used.size > 6, true, 'the stylesheet uses the design system tokens')
   assert(missing.length === 0, 'every --dsw-* token the stylesheet uses exists in the theme', missing.join(', '))
+}
+
+//#endregion
+
+//#region shipped artwork
+
+const { PANEL_ICON } = plugin.__test
+const primitives = findInstalled(join('dsh-client-ui-primitives', 'lib', 'index.js'))
+if (primitives === undefined) {
+  console.log('smoke: primitives package not found; skipped the panel-icon artwork check')
+} else {
+  const bundle = readFileSync(primitives, 'utf8')
+  const start = bundle.indexOf('IconPanelLeftOutlineArtwork = ')
+  const artwork = start === -1 ? '' : bundle.slice(start, start + 1600)
+  assert(start !== -1, 'the installed primitives still define IconPanelLeftOutlineArtwork')
+  assert(artwork.includes(PANEL_ICON.frame), 'the copied frame path is still the shipped one')
+  assert(artwork.includes(PANEL_ICON.divider), 'the copied divider path is still the shipped one')
+  assert(
+    artwork.includes(`viewBox: "${PANEL_ICON.viewBox}"`),
+    'the copied viewBox matches the shipped icon',
+    PANEL_ICON.viewBox,
+  )
+  assert(
+    artwork.includes('IconPanelLeftOutlineRegular') && artwork.includes('strokeWidth: 1'),
+    'the shipped Regular variant still strokes at 1px, like this copy',
+  )
 }
 
 //#endregion

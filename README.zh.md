@@ -6,7 +6,7 @@
 
 [English](README.md) | 中文
 
-<img src="docs/mobile-collapsed.jpg" width="300" alt="手机上打开 Harness：内容占满整宽，左上角是侧边栏按钮，没有图标细条">
+<img src="docs/mobile-collapsed.png" width="300" alt="手机上打开 Harness：内容占满整宽，左上角是侧边栏按钮，没有图标细条">
 
 <p>
 <img src="docs/mobile-drawer.png" width="300" alt="点一下按钮：侧边栏滑出盖在内容上，其余部分被蒙层压暗">
@@ -97,6 +97,9 @@ dsh plugin --profile web add /path/to/dsh-hide-sidebar
   - 会话页有现成的头部前导槽位 `conversation.header.leading`，按钮就放在标题栏里，**不额外占任何空间**；
   - Plugins／Schedules 这类面板页没有前导槽位，按钮就浮在框架左上角（`shell.overlay`），并给面板根节点加一条 40px 的透明左边框当留白（透明边框是"叠加"在面板原有内边距上，不覆盖它）。
 - 右侧面板打开时（手机上它是全屏）浮标会藏起来：右侧面板有自己的收起按钮，而且 ui-layout 在开右侧面板时本来就会收起窄屏侧边栏。
+- **图标就是官方那一个**，不是照着画的：从 `@deepseek-ai/dsh-client-ui-primitives` 原样抄来的 `IconPanelLeftOutlineRegular` —— 同样的 16px 方框、1px 描边、圆角矩形和取色 token。右上角"打开右侧栏"用的正是这份图形镜像之后的结果（`scaleX(-1)`），所以这里不镜像地用它，就是那个图标转 180°：两个角看起来是一家人。抄而不是 import，是因为 profile 里装的插件不该依赖 dsh 自带的包，而且 `require` 一旦失败会把整个 Web 启动一起带崩；离线检查会重新读本机安装的图形，这份拷贝哪天跟上游不一致就直接报错。
+
+<img src="docs/mobile-topband.png" alt="手机布局的顶栏：左边是新加的左侧栏按钮，右边是官方的右侧栏按钮，同一个图形，左右镜像">
 
 ### 只用了公开接缝
 
@@ -110,13 +113,14 @@ dsh plugin --profile web add /path/to/dsh-hide-sidebar
 npm test          # = node test/smoke.mjs —— 离线检查，不需要浏览器
 ```
 
-`test/smoke.mjs` 按模块加载器的真实方式加载 `client.js`（走 `window.__ModuleLoader__.load`），用桩上下文跑 `apply()`，再用 `react-dom/server` 把两个座位都渲染出来，共 43 项断言：
+`test/smoke.mjs` 按模块加载器的真实方式加载 `client.js`（走 `window.__ModuleLoader__.load`），用桩上下文跑 `apply()`，再用 `react-dom/server` 把两个座位都渲染出来，共 50 项断言：
 
 - 注册项（两个槽位、list 槽位的 id、locale、inject 面、`exports.inject`）；
 - `splitTracks` 的括号嵌套、空值、单轨等边界；
 - 帧状态观察者只在真的变化时通知；
 - 渲染标记里有 `aria-label`／`aria-expanded`，没有 `undefined`／`NaN`；
-- 样式表纪律：所有布局规则都被 `html[data-dsh-hide-sidebar]` 包着、没有字面色（hex/rgb/hsl）、**用到的每个 `--dsw-*` token 都在当前安装的主题里存在**（token 列表从本机 dsh 附带的那份主题包里读）。
+- 样式表纪律：所有布局规则都被 `html[data-dsh-hide-sidebar]` 包着、没有字面色（hex/rgb/hsl）、**用到的每个 `--dsw-*` token 都在当前安装的主题里存在**（token 列表从本机 dsh 附带的那份主题包里读）；
+- 图标一致性：两条 SVG path、viewBox、描边宽度都跟本机安装的 primitives 包里的原图形逐字比对 —— 抄歪了会测试失败，而不是悄悄看起来不对。
 
 还有一类专门用来"找崩"的输入——组件在浏览器里一旦抛异常，整个槽位会**静默清空**，所以这些值得跑。
 
