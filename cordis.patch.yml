@@ -1,0 +1,20 @@
+# dsh-hide-sidebar bundle patch.
+#
+# 本插件就在本仓库根目录，仓库根平铺。包名 dsh-hide-sidebar 同时是安装命令和
+# cordis 的 loader id，不要改。
+#
+# Two ways to compose this plugin into a profile:
+#
+# 1. Add "dsh-hide-sidebar" to the profile package.json's dsh.profile.bundles
+#    list (this file is then resolved through the dsh.bundle.patch manifest
+#    field), which is what `dsh plugin --profile web add <path>` does.
+# 2. Or paste the insert block below into the profile's cordis.patch.yml.
+#
+# `name` must be the FULL package specifier exactly as it is installed in the
+# profile's node_modules.
+#
+# `id` is the loader row's label; it stays equal to the package name so the
+# troubleshooting route `/plugins/<id>/client.js` points at the same string.
+- insert:
+    - id: dsh-hide-sidebar
+      name: "dsh-hide-sidebar"
