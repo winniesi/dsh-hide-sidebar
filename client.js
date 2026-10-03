@@ -354,9 +354,8 @@ window.__ModuleLoader__.load({
      * Copied here in full, as of dsh 0.2.0-rc.2: the plugin has no runtime
      * dependency on dsh's own packages, because a profile-installed plugin
      * cannot resolve them and a failed `require` would take the whole Web boot
-     * down with it. `test/smoke.mjs` compares this copy against the installed
-     * artwork so a later dsh release that redraws the icon is noticed instead of
-     * leaving the two corners looking subtly different.
+     * down with it. The copy is a snapshot this plugin owns — if a later dsh
+     * release redraws its icon, this one deliberately stays as it is.
      */
     const PANEL_ICON = {
       viewBox: '0 0 16 16',

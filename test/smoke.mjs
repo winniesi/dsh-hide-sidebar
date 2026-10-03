@@ -184,14 +184,15 @@ assert(overlayMarkup.includes('aria-expanded="false"'), 'a collapsed drawer repo
 assert(!overlayMarkup.includes('undefined'), 'no unresolved placeholder reaches the markup')
 assert(leadingMarkup.includes('dsh-hs-leading'), 'the header seat renders the leading toggle')
 assert(leadingMarkup.includes('viewBox="0 0 16 16"'), 'the toggle draws the shipped 16px panel glyph')
-assert(leadingMarkup.includes('M5.5 1.5V14.5'), 'the glyph carries the shipped divider rail')
+assert(leadingMarkup.includes(plugin.__test.PANEL_ICON.divider), 'the glyph carries the shipped divider rail')
 assert(!leadingMarkup.includes('NaN'), 'no NaN reaches the markup')
 
 //#endregion
 
 //#region pure helpers
 
-const { splitTracks, createFrameState, CSS, ATTR, DISMISS_SELECTORS, KEEP_OPEN_SELECTORS, ACTIVATE_SELECTORS } = plugin.__test
+const { splitTracks, createFrameState, CSS, ATTR, PANEL_ICON, DISMISS_SELECTORS, KEEP_OPEN_SELECTORS, ACTIVATE_SELECTORS } =
+  plugin.__test
 
 assert(DISMISS_SELECTORS.includes('[data-row-key^="session:"]'), 'the dismiss list hooks the session rows')
 assert(DISMISS_SELECTORS.includes('button:has([data-slot="sidebar.panellist"])'), 'the dismiss list hooks the panel rows')
@@ -255,7 +256,7 @@ function installedPackageRoots() {
 
 /**
  * Find one file inside dsh's installed packages, so a copy this plugin makes of
- * shipped artwork or shipped tokens can be checked against the real thing.
+ * shipped theme tokens can be checked against the real thing.
  * @param relative - path below the `@deepseek-ai` package directory.
  * @returns the file path, or undefined when dsh cannot be found.
  */
@@ -283,37 +284,6 @@ if (themeFile === undefined) {
 
 //#endregion
 
-//#region shipped artwork
-
-const { PANEL_ICON } = plugin.__test
-const primitives = findInstalled(join('dsh-client-ui-primitives', 'lib', 'index.js'))
-if (primitives === undefined) {
-  console.log('smoke: dsh not installed; skipped the panel-icon artwork comparison')
-} else {
-  const bundle = readFileSync(primitives, 'utf8')
-  const start = bundle.indexOf('IconPanelLeftOutlineArtwork = ')
-  if (start === -1) {
-    // The icon was moved or renamed upstream. That is neither this plugin's bug
-    // nor a reason for a red suite: say so, and let a human compare by eye.
-    console.log('smoke: the installed primitives no longer expose the artwork by that name;')
-    console.log('smoke: compare PANEL_ICON in client.js with the shipped icon by eye')
-  } else {
-    const artwork = bundle.slice(start, start + 1600)
-    assert(artwork.includes(PANEL_ICON.frame), 'the copied frame path still matches the shipped one')
-    assert(artwork.includes(PANEL_ICON.divider), 'the copied divider path still matches the shipped one')
-    assert(
-      artwork.includes(`viewBox: "${PANEL_ICON.viewBox}"`),
-      'the copied viewBox still matches the shipped icon',
-      PANEL_ICON.viewBox,
-    )
-    assert(
-      artwork.includes('IconPanelLeftOutlineRegular') && artwork.includes('strokeWidth: 1'),
-      'the shipped Regular variant still strokes at 1px, like this copy',
-    )
-  }
-}
-
-//#endregion
 
 if (failures.length > 0) {
   console.error(`\nsmoke: ${failures.length} of ${checks} checks failed\n`)
