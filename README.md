@@ -35,6 +35,8 @@ That last one is deliberate: a drawer that stays open hides the thing you just a
 
 On wide viewports the plugin is inert: no button is rendered, and every layout rule is gated on `html[data-dsh-hide-sidebar]` — an attribute written only while the frame's *measured* width is below the breakpoint.
 
+<img src="docs/desktop.png" width="640" alt="The same page in a 1440px window: the sidebar is docked and expanded, with no toggle button and no reserved gutter">
+
 ## Install
 
 Requires `dsh >= 0.2.0-rc.1 < 0.3.0-0`. That range is checked at install and boot time through `peerDependencies`, and it has to spell out the prerelease: a `^0.2.0` range does not match `0.2.0-rc.2`.
